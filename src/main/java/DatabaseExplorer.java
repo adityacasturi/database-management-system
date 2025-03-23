@@ -1,4 +1,7 @@
-import java.io.BufferedReader;
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvValidationException;
+import de.vandermeer.asciitable.AsciiTable;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -54,14 +57,79 @@ class DatabaseExplorer {
 
     // Read and return the schema for a given table.
     public String viewSchema(String dbName, String tableName) {
-        String schemaFilePath = dbsDir + File.separator + dbName + File.separator + tableName + "_schema.csv";
-        return readFileContents(schemaFilePath);
+        String schemaFilePath = dbsDir + File.separator + dbName + File.separator + tableName + ".schema";
+        File schemaFile = new File(schemaFilePath);
+
+        if (!schemaFile.exists()) {
+            return "Schema file does not exist: " + schemaFilePath;
+        }
+
+        List<String[]> schemaEntries = new ArrayList<>();
+        try (CSVReader csvReader = new CSVReader(new FileReader(schemaFile))) {
+            String[] row;
+            while ((row = csvReader.readNext()) != null) {
+                if (row.length >= 2) {
+                    schemaEntries.add(new String[]{ row[0].trim(), row[1].trim() });
+                }
+            }
+        } catch (IOException | CsvValidationException e) {
+            return "Error reading schema file: " + e.getMessage();
+        }
+
+        if (schemaEntries.isEmpty()) {
+            return "No schema information found in file.";
+        }
+
+        AsciiTable at = new AsciiTable();
+        at.addRule();
+        at.addRow("Column Name", "Data Type");
+        at.addRule();
+
+        for (String[] entry : schemaEntries) {
+            at.addRow(entry[0], entry[1]);
+            at.addRule();
+        }
+
+        return at.render();
     }
 
     // Read and return the data for a given table.
-    public String viewData(String dbName, String tableName) {
-        String dataFilePath = dbsDir + File.separator + dbName + File.separator + tableName + "_data.csv";
-        return readFileContents(dataFilePath);
+    public String viewTableData(String dbName, String tableName) {
+        String dataFilePath = dbsDir + File.separator + dbName + File.separator + tableName + ".csv";
+        File dataFile = new File(dataFilePath);
+        if (!dataFile.exists()) {
+            return "Data file does not exist: " + dataFilePath;
+        }
+
+        List<String[]> rows = new ArrayList<>();
+        try (CSVReader csvReader = new CSVReader(new FileReader(dataFile))) {
+            String[] row;
+            while ((row = csvReader.readNext()) != null) {
+                rows.add(row);
+            }
+        } catch (IOException | CsvValidationException e) {
+            return "Error reading data file: " + e.getMessage();
+        }
+
+        if (rows.isEmpty()) {
+            return "No data found in file.";
+        }
+
+        AsciiTable at = new AsciiTable();
+        String[] header = rows.getFirst();
+        at.addRule();
+        at.addRow((Object[]) header);
+        at.addRule();
+
+        // max 20 rows
+        int maxRowsToPrint = Math.min(rows.size(), 20);
+        for (int i = 1; i < maxRowsToPrint; i++) {
+            String[] row = rows.get(i);
+            at.addRow((Object[]) row);
+            at.addRule();
+        }
+
+        return at.render();
     }
 
     // A stub for query execution.
@@ -69,23 +137,5 @@ class DatabaseExplorer {
     public void queryDatabase(String dbName, String query) {
         System.out.println("Query executed on database '" + dbName + "': " + query);
         // Extend this method to actually parse and execute queries if needed.
-    }
-
-    // Utility method to read the content of a file into a String.
-    private String readFileContents(String filePath) {
-        StringBuilder content = new StringBuilder();
-        File file = new File(filePath);
-        if (!file.exists()) {
-            return "File not found: " + filePath;
-        }
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                content.append(line).append(System.lineSeparator());
-            }
-        } catch (IOException e) {
-            return "Error reading file: " + filePath;
-        }
-        return content.toString();
     }
 }

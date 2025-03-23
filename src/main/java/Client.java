@@ -5,7 +5,6 @@ public class Client {
     private final DatabaseExplorer explorer;
     private final Scanner scanner;
 
-    // The storageDirLoc is where your "dbs" folder is located.
     public Client(String storageDirLoc) {
         this.explorer = new DatabaseExplorer(storageDirLoc);
         this.scanner = new Scanner(System.in);
@@ -115,7 +114,7 @@ public class Client {
                 System.out.println("\nSchema for " + tableName + ":");
                 System.out.println(schema);
             } else if (input.equals("2")) {
-                String data = explorer.viewData(dbName, tableName);
+                String data = explorer.viewTableData(dbName, tableName);
                 System.out.println("\nData for " + tableName + ":");
                 System.out.println(data);
             } else if (input.equals("3")) {
