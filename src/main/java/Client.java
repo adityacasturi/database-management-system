@@ -1,5 +1,6 @@
 import de.vandermeer.asciitable.AsciiTable;
 import model.ColumnSchema;
+import model.QueryResult;
 import model.TableSchema;
 
 import java.util.ArrayList;
@@ -79,16 +80,28 @@ public class Client {
                 return;
             } else {
                 try {
-                    List<String[]> queryResults = QueryHandler.handle(query, dbName);
+                    QueryResult res = QueryHandler.handle(query, dbName);
+                    List<String[]> rows = res.getRows();
 
-                    if (queryResults.isEmpty()) {
+                    if (rows.isEmpty()) {
                         System.out.println("0 rows returned by query.");
                     } else {
-                        System.out.println(queryResults.size() + " rows returned by query.");
+                        System.out.println(rows.size() + " rows returned by query.");
 
                         AsciiTable at = new AsciiTable();
-                        for (String[] row : queryResults) {
-                            at.addRule();
+                        TableSchema tableSchema =
+                                DatabaseExplorer.getTableSchema(res.getDatabaseName(),
+                                res.getTableName());
+
+                        String[] header = new String[tableSchema.getColumns().size()];
+                        for (int i = 0; i < tableSchema.getColumns().size(); i++) {
+                            header[i] = tableSchema.getColumns().get(i).getColumnName();
+                        }
+                        at.addRule();
+                        at.addRow((Object[]) header);
+                        at.addRule();
+
+                        for (String[] row : rows) {
                             at.addRow((Object[]) row);
                             at.addRule();
                         }

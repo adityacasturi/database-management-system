@@ -3,6 +3,7 @@ package model;
 public class SimpleQuery {
     private String tableName;
     private String columnName;
+    private String databaseName;
     private String value;
 
     public SimpleQuery(String tableName, String columnName, String value) {
@@ -33,6 +34,14 @@ public class SimpleQuery {
 
     public void setValue(String value) {
         this.value = value;
+    }
+
+    public String getDatabaseName() {
+        return databaseName;
+    }
+
+    public void setDatabaseName(String databaseName) {
+        this.databaseName = databaseName;
     }
 
     @Override

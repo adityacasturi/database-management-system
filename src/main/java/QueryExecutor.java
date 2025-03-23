@@ -1,8 +1,12 @@
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvValidationException;
 import model.ColumnSchema;
 import model.SimpleQuery;
 import model.TableSchema;
 
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -10,13 +14,23 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class QueryExecutor {
-    public static List<String[]> execute(SimpleQuery query, String dbName) throws Exception {
+    public static List<String[]> execute(SimpleQuery query) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(4);
         List<Future<List<String[]>>> futures = new ArrayList<>();
 
-        String dataFilesPath = StorageLocations.STORAGE_LOC + File.separator + dbName;
+        String dataFilesPath = StorageLocations.STORAGE_LOC + File.separator + query.getDatabaseName();
 
         List<String[]> results = new ArrayList<>();
+
+        TableSchema tableSchema;
+        try {
+            tableSchema = DatabaseExplorer.getTableSchema(query.getDatabaseName(), query.getTableName());
+        } catch (Exception e) {
+            throw new Exception("Specified table " + query.getTableName() + "does not exist in " +
+                    "database " + query.getDatabaseName());
+        }
+
+        final int colIndex = getColIndex(query, tableSchema);
 
         int suffix = 0;
         while (true) {
@@ -25,25 +39,20 @@ public class QueryExecutor {
                 break;
             }
 
-            TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, query.getTableName());
-            int i = 0;
-            for (ColumnSchema columnSchema : tableSchema.getColumns()) {
-                if (columnSchema.getColumnName().equals(query.getColumnName())) {
-                    break;
-                }
-                i++;
-            }
-
-            final int colIndex = i;
-            final int currSuffix = suffix;
-
             futures.add(executor.submit(() -> {
                 List<String[]> localResults = new ArrayList<>();
-                for (String[] row : DatabaseExplorer.getTableData(dbName, query.getTableName() + "_" + currSuffix)) {
-                    if (row[colIndex].equals(query.getValue())) {
-                        localResults.add(row);
+
+                try (CSVReader csvReader = new CSVReader(new FileReader(dataFile))) {
+                    String[] row;
+                    while ((row = csvReader.readNext()) != null) {
+                        if (row[colIndex].equals(query.getValue())) {
+                            localResults.add(row);
+                        }
                     }
+                } catch (IOException | CsvValidationException e) {
+                    throw new Exception("Error parsing data file.", e);
                 }
+
                 return localResults;
             }));
 
@@ -60,5 +69,23 @@ public class QueryExecutor {
 
         executor.shutdown();
         return results;
+    }
+
+    private static int getColIndex(SimpleQuery query, TableSchema tableSchema) throws Exception {
+        int colIndex = 0;
+        boolean colFound = false;
+        for (ColumnSchema columnSchema : tableSchema.getColumns()) {
+            if (columnSchema.getColumnName().equals(query.getColumnName())) {
+                colFound = true;
+                break;
+            }
+            colIndex++;
+        }
+
+        if (!colFound) {
+            throw new Exception("Specified column " + query.getColumnName() + " does not exist in" +
+                    " table " + query.getTableName());
+        }
+        return colIndex;
     }
 }
