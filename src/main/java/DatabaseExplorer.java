@@ -16,11 +16,12 @@ class DatabaseExplorer {
         File dbsFolder = new File(StorageLocations.STORAGE_LOC);
         if (dbsFolder.exists() && dbsFolder.isDirectory()) {
             File[] files = dbsFolder.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        databases.add(file.getName());
-                    }
+            if (files == null) {
+                return databases;
+            }
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    databases.add(file.getName());
                 }
             }
         }
@@ -32,12 +33,13 @@ class DatabaseExplorer {
         File dbFolder = new File(StorageLocations.STORAGE_LOC + File.separator + dbName);
         if (dbFolder.exists() && dbFolder.isDirectory()) {
             File[] files = dbFolder.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    String fileName = file.getName();
-                    if (fileName.endsWith(".csv") && !tables.contains(fileName.split("_")[0])) {
-                        tables.add(fileName.split("_")[0]);
-                    }
+            if (files == null) {
+                return tables;
+            }
+            for (File file : files) {
+                String fileName = file.getName();
+                if (fileName.endsWith("_0.csv")) {
+                    tables.add(fileName.split("_")[0]);
                 }
             }
         }
@@ -58,7 +60,7 @@ class DatabaseExplorer {
             String[] row;
             while ((row = csvReader.readNext()) != null) {
                 if (row.length >= 2) {
-                    schemaEntries.add(new String[]{ row[0].trim(), row[1].trim() });
+                    schemaEntries.add(new String[]{row[0].trim(), row[1].trim()});
                 }
             }
         } catch (IOException | CsvValidationException e) {

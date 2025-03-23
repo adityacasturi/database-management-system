@@ -14,13 +14,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class QueryExecutor {
-    public static List<String[]> execute(SimpleQuery query) throws Exception {
+    public static int execute(SimpleQuery query) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(4);
-        List<Future<List<String[]>>> futures = new ArrayList<>();
+        List<Future<Integer>> futures = new ArrayList<>();
 
         String dataFilesPath = StorageLocations.STORAGE_LOC + File.separator + query.getDatabaseName();
-
-        List<String[]> results = new ArrayList<>();
 
         TableSchema tableSchema;
         try {
@@ -30,62 +28,59 @@ public class QueryExecutor {
                     "database " + query.getDatabaseName());
         }
 
-        final int colIndex = getColIndex(query, tableSchema);
+        final int colIndex = getColIndex(tableSchema, query.getColumnName());
 
-        int suffix = 0;
+        int shardIdx = 0;
         while (true) {
-            File dataFile = new File(dataFilesPath + File.separator + query.getTableName() + "_" + suffix + ".csv");
+            File dataFile = new File(dataFilesPath + File.separator + query.getTableName() + "_" + shardIdx + ".csv");
             if (!dataFile.exists()) {
                 break;
             }
 
             futures.add(executor.submit(() -> {
-                List<String[]> localResults = new ArrayList<>();
+                int rowsFound = 0;
 
                 try (CSVReader csvReader = new CSVReader(new FileReader(dataFile))) {
                     String[] row;
                     while ((row = csvReader.readNext()) != null) {
                         if (row[colIndex].equals(query.getValue())) {
-                            localResults.add(row);
+                            rowsFound++;
                         }
                     }
                 } catch (IOException | CsvValidationException e) {
                     throw new Exception("Error parsing data file.", e);
                 }
 
-                return localResults;
+                return rowsFound;
             }));
 
-            suffix++;
+            shardIdx++;
         }
 
-        for (Future<List<String[]>> future : futures) {
+        int totalRowsFound = 0;
+        for (Future<Integer> future : futures) {
             try {
-                results.addAll(future.get());
+                totalRowsFound += future.get();
             } catch (Exception e) {
                 throw new Error("Error while executing query", e);
             }
         }
 
         executor.shutdown();
-        return results;
+
+        return totalRowsFound;
     }
 
-    private static int getColIndex(SimpleQuery query, TableSchema tableSchema) throws Exception {
+    private static int getColIndex(TableSchema tableSchema, String columnName) throws Exception {
         int colIndex = 0;
-        boolean colFound = false;
         for (ColumnSchema columnSchema : tableSchema.getColumns()) {
-            if (columnSchema.getColumnName().equals(query.getColumnName())) {
-                colFound = true;
-                break;
+            if (columnSchema.getColumnName().equals(columnName)) {
+                return colIndex;
             }
             colIndex++;
         }
 
-        if (!colFound) {
-            throw new Exception("Specified column " + query.getColumnName() + " does not exist in" +
-                    " table " + query.getTableName());
-        }
-        return colIndex;
+        throw new Exception("Specified column " + columnName + " does not exist in" +
+                " table " + tableSchema.getTableName());
     }
 }

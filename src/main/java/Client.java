@@ -22,13 +22,14 @@ public class Client {
                 break;
             }
 
-            System.out.println("\nAvailable Databases:");
+            System.out.println("Available Databases:");
             for (int i = 0; i < databases.size(); i++) {
                 System.out.println((i + 1) + ". " + databases.get(i));
             }
-            System.out.print("Select a database (number) or type 'exit' to quit: ");
-            String input = scanner.nextLine();
 
+            System.out.print("Select a database (number) or type 'exit' to quit: ");
+
+            String input = scanner.nextLine();
             if (input.equalsIgnoreCase("exit")) {
                 break;
             }
@@ -40,7 +41,8 @@ public class Client {
                     continue;
                 }
                 String selectedDb = databases.get(choice - 1);
-                allDatabasesMenu(selectedDb);
+
+                databaseMenu(selectedDb);
             } catch (NumberFormatException e) {
                 System.out.println("Invalid input. Please enter a number.");
             }
@@ -48,23 +50,20 @@ public class Client {
         System.out.println("Exiting program.");
     }
 
-    private void allDatabasesMenu(String dbName) {
+    private void databaseMenu(String dbName) {
         while (true) {
-            System.out.println("\nDatabase: " + dbName);
+            System.out.println("Database: " + dbName);
             System.out.println("1. List all tables");
-            System.out.println("2. Query the database");
+            System.out.println("2. Query");
             System.out.println("3. Go back");
             System.out.print("Enter choice: ");
-            String input = scanner.nextLine();
 
-            if (input.equals("1")) {
-                allTablesMenu(dbName);
-            } else if (input.equals("2")) {
-                queryMenu(dbName);
-            } else if (input.equals("3")) {
-                break;
-            } else {
-                System.out.println("Invalid selection.");
+            String input = scanner.nextLine();
+            switch (input) {
+                case "1" -> allTablesMenu(dbName);
+                case "2" -> queryMenu(dbName);
+                case "3" -> { return; }
+                default -> System.out.println("Invalid selection.");
             }
         }
     }
@@ -80,34 +79,13 @@ public class Client {
                 return;
             } else {
                 try {
-                    QueryResult res = QueryHandler.handle(query, dbName);
-                    List<String[]> rows = res.getRows();
+                    long startTime = System.nanoTime();
+                    QueryResult res = QueryHandler.handle(dbName, query);
+                    long endTime = System.nanoTime();
+                    long durationInMillis = (endTime - startTime) / 1_000_000;
 
-                    if (rows.isEmpty()) {
-                        System.out.println("0 rows returned by query.");
-                    } else {
-                        System.out.println(rows.size() + " rows returned by query.");
-
-                        AsciiTable at = new AsciiTable();
-                        TableSchema tableSchema =
-                                DatabaseExplorer.getTableSchema(res.getDatabaseName(),
-                                res.getTableName());
-
-                        String[] header = new String[tableSchema.getColumns().size()];
-                        for (int i = 0; i < tableSchema.getColumns().size(); i++) {
-                            header[i] = tableSchema.getColumns().get(i).getColumnName();
-                        }
-                        at.addRule();
-                        at.addRow((Object[]) header);
-                        at.addRule();
-
-                        for (String[] row : rows) {
-                            at.addRow((Object[]) row);
-                            at.addRule();
-                        }
-
-                        System.out.println(at.render());
-                    }
+                    System.out.println("Query execution time: " + durationInMillis + " ms");
+                    System.out.println(res.getRowsFound() + " rows returned by query.");
 
                     return;
                 } catch (Exception e) {
@@ -216,8 +194,4 @@ public class Client {
         }
     }
 
-    public static void main(String[] args) {
-        Client client = new Client();
-        client.start();
-    }
 }

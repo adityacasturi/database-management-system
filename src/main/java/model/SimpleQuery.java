@@ -1,38 +1,15 @@
 package model;
 
 public class SimpleQuery {
+    private String databaseName;
     private String tableName;
     private String columnName;
-    private String databaseName;
     private String value;
 
-    public SimpleQuery(String tableName, String columnName, String value) {
+    public SimpleQuery(String dbName, String tableName, String columnName, String value) {
+        this.databaseName = dbName;
         this.tableName = tableName;
         this.columnName = columnName;
-        this.value = value;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
-    }
-
-    public String getColumnName() {
-        return columnName;
-    }
-
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
-    }
-
-    public String getValue() {
-        return value;
-    }
-
-    public void setValue(String value) {
         this.value = value;
     }
 
@@ -40,8 +17,16 @@ public class SimpleQuery {
         return databaseName;
     }
 
-    public void setDatabaseName(String databaseName) {
-        this.databaseName = databaseName;
+    public String getTableName() {
+        return tableName;
+    }
+
+    public String getColumnName() {
+        return columnName;
+    }
+
+    public String getValue() {
+        return value;
     }
 
     @Override

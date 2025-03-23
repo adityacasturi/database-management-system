@@ -4,7 +4,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class QueryParser {
-    public static SimpleQuery parse(String query) throws Exception {
+    public static SimpleQuery parse(String dbName, String query) throws Exception {
         Pattern pattern = Pattern.compile("select \\* from ([0-9a-zA-Z]*) where ([a-zA-Z0-9]*) = ([a-zA-Z0-9]*)");
         Matcher matcher = pattern.matcher(query);
         if (!matcher.matches()) {
@@ -15,6 +15,6 @@ public class QueryParser {
         String columnName = matcher.group(2);
         String value = matcher.group(3);
 
-        return new SimpleQuery(tableName, columnName, value);
+        return new SimpleQuery(dbName, tableName, columnName, value);
     }
 }

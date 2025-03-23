@@ -1,39 +1,25 @@
 package model;
 
-import java.util.List;
-
 public class QueryResult {
-    private List<String[]> rows;
-    private String databaseName;
-    private String tableName;
+    private final String databaseName;
+    private final String tableName;
+    private final int rowsFound;
 
-    public QueryResult(List<String[]> rows, String databaseName, String tableName) {
-        this.rows = rows;
+    public QueryResult(String databaseName, String tableName, int rowsFound) {
         this.databaseName = databaseName;
         this.tableName = tableName;
-    }
-
-    public List<String[]> getRows() {
-        return rows;
-    }
-
-    public void setRows(List<String[]> rows) {
-        this.rows = rows;
+        this.rowsFound = rowsFound;
     }
 
     public String getDatabaseName() {
         return databaseName;
     }
 
-    public void setDatabaseName(String databaseName) {
-        this.databaseName = databaseName;
-    }
-
     public String getTableName() {
         return tableName;
     }
 
-    public void setTableName(String tableName) {
-        this.tableName = tableName;
+    public int getRowsFound() {
+        return rowsFound;
     }
 }
