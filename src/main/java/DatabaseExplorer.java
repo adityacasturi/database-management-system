@@ -1,6 +1,7 @@
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
-import de.vandermeer.asciitable.AsciiTable;
+import model.ColumnSchema;
+import model.TableSchema;
 
 import java.io.File;
 import java.io.FileReader;
@@ -9,19 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 class DatabaseExplorer {
-    private final String storageDirLoc;
-    private final String dbsDir;
-
-    // Constructor sets the location of the "dbs" folder.
-    public DatabaseExplorer(String storageDirLoc) {
-        this.storageDirLoc = storageDirLoc;
-        this.dbsDir = storageDirLoc + File.separator + "dbs";
-    }
-
     // List all databases by listing directories inside the "dbs" folder.
-    public List<String> listDatabases() {
+    public static List<String> listDatabases() {
         List<String> databases = new ArrayList<>();
-        File dbsFolder = new File(dbsDir);
+        File dbsFolder = new File(StorageLocations.STORAGE_LOC);
         if (dbsFolder.exists() && dbsFolder.isDirectory()) {
             File[] files = dbsFolder.listFiles();
             if (files != null) {
@@ -35,19 +27,16 @@ class DatabaseExplorer {
         return databases;
     }
 
-    // List all tables in a given database.
-    // Tables are determined by files ending with "_data.csv".
-    public List<String> listTables(String dbName) {
+    public static List<String> listTables(String dbName) {
         List<String> tables = new ArrayList<>();
-        File dbFolder = new File(dbsDir + File.separator + dbName);
+        File dbFolder = new File(StorageLocations.STORAGE_LOC + File.separator + dbName);
         if (dbFolder.exists() && dbFolder.isDirectory()) {
             File[] files = dbFolder.listFiles();
             if (files != null) {
                 for (File file : files) {
                     String fileName = file.getName();
-                    if (fileName.endsWith(".csv")) {
-                        String tableName = fileName.substring(0, fileName.length() - ".csv".length());
-                        tables.add(tableName);
+                    if (fileName.endsWith(".csv") && !tables.contains(fileName.split("_")[0])) {
+                        tables.add(fileName.split("_")[0]);
                     }
                 }
             }
@@ -56,12 +45,12 @@ class DatabaseExplorer {
     }
 
     // Read and return the schema for a given table.
-    public String viewSchema(String dbName, String tableName) {
-        String schemaFilePath = dbsDir + File.separator + dbName + File.separator + tableName + ".schema";
+    public static TableSchema getTableSchema(String dbName, String tableName) throws Exception {
+        String schemaFilePath = StorageLocations.STORAGE_LOC + File.separator + dbName + File.separator + tableName + ".schema";
         File schemaFile = new File(schemaFilePath);
 
         if (!schemaFile.exists()) {
-            return "Schema file does not exist: " + schemaFilePath;
+            throw new Exception("Schema file does not exist");
         }
 
         List<String[]> schemaEntries = new ArrayList<>();
@@ -73,32 +62,26 @@ class DatabaseExplorer {
                 }
             }
         } catch (IOException | CsvValidationException e) {
-            return "Error reading schema file: " + e.getMessage();
+            throw new Exception("Error parsing schema file.", e);
         }
 
         if (schemaEntries.isEmpty()) {
-            return "No schema information found in file.";
+            throw new Exception("No schema information found in file.");
         }
 
-        AsciiTable at = new AsciiTable();
-        at.addRule();
-        at.addRow("Column Name", "Data Type");
-        at.addRule();
-
-        for (String[] entry : schemaEntries) {
-            at.addRow(entry[0], entry[1]);
-            at.addRule();
+        List<ColumnSchema> columns = new ArrayList<>();
+        for (String[] row : schemaEntries) {
+            columns.add(new ColumnSchema(row[0], row[1]));
         }
-
-        return at.render();
+        return new TableSchema(columns, tableName);
     }
 
     // Read and return the data for a given table.
-    public String viewTableData(String dbName, String tableName) {
-        String dataFilePath = dbsDir + File.separator + dbName + File.separator + tableName + ".csv";
+    public static List<String[]> getTableData(String dbName, String tableName) throws Exception {
+        String dataFilePath = StorageLocations.STORAGE_LOC + File.separator + dbName + File.separator + tableName + ".csv";
         File dataFile = new File(dataFilePath);
         if (!dataFile.exists()) {
-            return "Data file does not exist: " + dataFilePath;
+            throw new Exception("Data file does not exist");
         }
 
         List<String[]> rows = new ArrayList<>();
@@ -108,34 +91,9 @@ class DatabaseExplorer {
                 rows.add(row);
             }
         } catch (IOException | CsvValidationException e) {
-            return "Error reading data file: " + e.getMessage();
+            throw new Exception("Error parsing data file.", e);
         }
 
-        if (rows.isEmpty()) {
-            return "No data found in file.";
-        }
-
-        AsciiTable at = new AsciiTable();
-        String[] header = rows.getFirst();
-        at.addRule();
-        at.addRow((Object[]) header);
-        at.addRule();
-
-        // max 20 rows
-        int maxRowsToPrint = Math.min(rows.size(), 20);
-        for (int i = 1; i < maxRowsToPrint; i++) {
-            String[] row = rows.get(i);
-            at.addRow((Object[]) row);
-            at.addRule();
-        }
-
-        return at.render();
-    }
-
-    // A stub for query execution.
-    // Currently, it simply prints out the executed query.
-    public void queryDatabase(String dbName, String query) {
-        System.out.println("Query executed on database '" + dbName + "': " + query);
-        // Extend this method to actually parse and execute queries if needed.
+        return rows;
     }
 }

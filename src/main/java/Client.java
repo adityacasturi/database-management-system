@@ -1,18 +1,21 @@
+import de.vandermeer.asciitable.AsciiTable;
+import model.ColumnSchema;
+import model.TableSchema;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
 public class Client {
-    private final DatabaseExplorer explorer;
     private final Scanner scanner;
 
-    public Client(String storageDirLoc) {
-        this.explorer = new DatabaseExplorer(storageDirLoc);
+    public Client() {
         this.scanner = new Scanner(System.in);
     }
 
     public void start() {
         while (true) {
-            List<String> databases = explorer.listDatabases();
+            List<String> databases = DatabaseExplorer.listDatabases();
             if (databases.isEmpty()) {
                 System.out.println("No databases found.");
                 break;
@@ -56,9 +59,7 @@ public class Client {
             if (input.equals("1")) {
                 allTablesMenu(dbName);
             } else if (input.equals("2")) {
-                System.out.print("Enter your query: ");
-                String query = scanner.nextLine();
-                explorer.queryDatabase(dbName, query);
+                queryMenu(dbName);
             } else if (input.equals("3")) {
                 break;
             } else {
@@ -67,8 +68,44 @@ public class Client {
         }
     }
 
+    private void queryMenu(String dbName) {
+        String query;
+        while (true) {
+            System.out.print("Enter your query (or type 'back' to go back): ");
+            query = scanner.nextLine().trim();
+
+            if (query.equalsIgnoreCase("back")) {
+                System.out.println("Returning to previous menu.");
+                return;
+            } else {
+                try {
+                    List<String[]> queryResults = QueryHandler.handle(query, dbName);
+
+                    if (queryResults.isEmpty()) {
+                        System.out.println("0 rows returned by query.");
+                    } else {
+                        System.out.println(queryResults.size() + " rows returned by query.");
+
+                        AsciiTable at = new AsciiTable();
+                        for (String[] row : queryResults) {
+                            at.addRule();
+                            at.addRow((Object[]) row);
+                            at.addRule();
+                        }
+
+                        System.out.println(at.render());
+                    }
+
+                    return;
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
+            }
+        }
+    }
+
     private void allTablesMenu(String dbName) {
-        List<String> tables = explorer.listTables(dbName);
+        List<String> tables = DatabaseExplorer.listTables(dbName);
         if (tables.isEmpty()) {
             System.out.println("No tables found in database '" + dbName + "'.");
             return;
@@ -94,13 +131,13 @@ public class Client {
                 }
                 String tableName = tables.get(choice - 1);
                 tableMenu(dbName, tableName);
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input. Please enter a number.");
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
             }
         }
     }
 
-    private void tableMenu(String dbName, String tableName) {
+    private void tableMenu(String dbName, String tableName) throws Exception {
         while (true) {
             System.out.println("\nTable: " + tableName);
             System.out.println("1. View schema");
@@ -110,13 +147,54 @@ public class Client {
             String input = scanner.nextLine();
 
             if (input.equals("1")) {
-                String schema = explorer.viewSchema(dbName, tableName);
+                TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, tableName);
                 System.out.println("\nSchema for " + tableName + ":");
-                System.out.println(schema);
+
+                AsciiTable at = new AsciiTable();
+                at.addRule();
+                at.addRow("Column Name", "Data Type");
+                at.addRule();
+
+                for (ColumnSchema columnSchema : tableSchema.getColumns()) {
+                    at.addRow(columnSchema.getColumnName(), columnSchema.getColumnType());
+                    at.addRule();
+                }
+
+                System.out.println(at.render());
             } else if (input.equals("2")) {
-                String data = explorer.viewTableData(dbName, tableName);
+                List<String[]> data = new ArrayList<>();
+                int suffix = 0;
+                while (true) {
+                    try {
+                        data.addAll(DatabaseExplorer.getTableData(dbName, tableName + "_" + suffix));
+                        suffix++;
+                    } catch (Exception e) {
+                        break;
+                    }
+                }
                 System.out.println("\nData for " + tableName + ":");
-                System.out.println(data);
+
+                System.out.println(tableName);
+                TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, tableName);
+                AsciiTable at = new AsciiTable();
+
+                String[] header = new String[tableSchema.getColumns().size()];
+                for (int i = 0; i < tableSchema.getColumns().size(); i++) {
+                    header[i] = tableSchema.getColumns().get(i).getColumnName();
+                }
+                at.addRule();
+                at.addRow((Object[]) header);
+                at.addRule();
+
+                // max 20 rows
+                int maxRowsToPrint = Math.min(data.size(), 20);
+                for (int i = 1; i < maxRowsToPrint; i++) {
+                    String[] row = data.get(i);
+                    at.addRow((Object[]) row);
+                    at.addRule();
+                }
+
+                System.out.println(at.render());
             } else if (input.equals("3")) {
                 break;
             } else {
@@ -126,10 +204,7 @@ public class Client {
     }
 
     public static void main(String[] args) {
-        // Modify storageDirLoc as needed. Here we assume the current directory.
-        String storageDirLoc = System.getProperty("user.home");
-        System.out.println(storageDirLoc);
-        Client client = new Client(storageDirLoc);
+        Client client = new Client();
         client.start();
     }
 }
