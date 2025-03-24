@@ -85,7 +85,30 @@ public class Client {
                     long durationInMillis = (endTime - startTime) / 1_000_000;
 
                     System.out.println("Query execution time: " + durationInMillis + " ms");
-                    System.out.println(res.getRowsFound() + " rows returned by query.");
+                    System.out.println(res.getRows().size() + " rows returned by query.");
+
+                    if (res.getRows().isEmpty()) {
+                        return;
+                    }
+
+                    TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, res.getTableName());
+                    AsciiTable at = new AsciiTable();
+
+                    String[] header = new String[tableSchema.getColumns().size()];
+                    for (int i = 0; i < tableSchema.getColumns().size(); i++) {
+                        header[i] = tableSchema.getColumns().get(i).getColumnName();
+                    }
+                    at.addRule();
+                    at.addRow((Object[]) header);
+                    at.addRule();
+
+                    for (int i = 0; i < res.getRows().size(); i++) {
+                        String[] row = res.getRows().get(i);
+                        at.addRow((Object[]) row);
+                        at.addRule();
+                    }
+
+                    System.out.println(at.render());
 
                     return;
                 } catch (Exception e) {
@@ -137,59 +160,62 @@ public class Client {
             System.out.print("Enter choice: ");
             String input = scanner.nextLine();
 
-            if (input.equals("1")) {
-                TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, tableName);
-                System.out.println("\nSchema for " + tableName + ":");
+            switch (input) {
+                case "1" -> {
+                    TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, tableName);
+                    System.out.println("\nSchema for " + tableName + ":");
 
-                AsciiTable at = new AsciiTable();
-                at.addRule();
-                at.addRow("Column Name", "Data Type");
-                at.addRule();
-
-                for (ColumnSchema columnSchema : tableSchema.getColumns()) {
-                    at.addRow(columnSchema.getColumnName(), columnSchema.getColumnType());
+                    AsciiTable at = new AsciiTable();
                     at.addRule();
-                }
+                    at.addRow("Column Name", "Data Type");
+                    at.addRule();
 
-                System.out.println(at.render());
-            } else if (input.equals("2")) {
-                List<String[]> data = new ArrayList<>();
-                int suffix = 0;
-                while (true) {
-                    try {
-                        data.addAll(DatabaseExplorer.getTableData(dbName, tableName + "_" + suffix));
-                        suffix++;
-                    } catch (Exception e) {
-                        break;
+                    for (ColumnSchema columnSchema : tableSchema.getColumns()) {
+                        at.addRow(columnSchema.getColumnName(), columnSchema.getColumnType());
+                        at.addRule();
                     }
+
+                    System.out.println(at.render());
                 }
-                System.out.println("\nData for " + tableName + ":");
+                case "2" -> {
+                    List<String[]> data = new ArrayList<>();
+                    int suffix = 0;
+                    while (true) {
+                        try {
+                            data.addAll(DatabaseExplorer.getTableData(dbName, tableName + "_" + suffix));
+                            suffix++;
+                        } catch (Exception e) {
+                            break;
+                        }
+                    }
+                    System.out.println("\nData for " + tableName + ":");
 
-                System.out.println(tableName);
-                TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, tableName);
-                AsciiTable at = new AsciiTable();
+                    System.out.println(tableName);
+                    TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, tableName);
+                    AsciiTable at = new AsciiTable();
 
-                String[] header = new String[tableSchema.getColumns().size()];
-                for (int i = 0; i < tableSchema.getColumns().size(); i++) {
-                    header[i] = tableSchema.getColumns().get(i).getColumnName();
-                }
-                at.addRule();
-                at.addRow((Object[]) header);
-                at.addRule();
-
-                // max 20 rows
-                int maxRowsToPrint = Math.min(data.size(), 20);
-                for (int i = 1; i < maxRowsToPrint; i++) {
-                    String[] row = data.get(i);
-                    at.addRow((Object[]) row);
+                    String[] header = new String[tableSchema.getColumns().size()];
+                    for (int i = 0; i < tableSchema.getColumns().size(); i++) {
+                        header[i] = tableSchema.getColumns().get(i).getColumnName();
+                    }
                     at.addRule();
-                }
+                    at.addRow((Object[]) header);
+                    at.addRule();
 
-                System.out.println(at.render());
-            } else if (input.equals("3")) {
-                break;
-            } else {
-                System.out.println("Invalid selection.");
+                    // max 20 rows
+                    int maxRowsToPrint = Math.min(data.size(), 20);
+                    for (int i = 1; i < maxRowsToPrint; i++) {
+                        String[] row = data.get(i);
+                        at.addRow((Object[]) row);
+                        at.addRule();
+                    }
+
+                    System.out.println(at.render());
+                }
+                case "3" -> {
+                    return;
+                }
+                default -> System.out.println("Invalid selection.");
             }
         }
     }

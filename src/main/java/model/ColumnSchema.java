@@ -1,28 +1,26 @@
 package model;
 
 public class ColumnSchema {
-    private String columnName;
-    private String columnType;
+    private final String columnName;
+    private final String columnType;
+    private final int numBytes;
 
-    public ColumnSchema(String columnName, String columnType) {
+    public ColumnSchema(String columnName, String columnType, int numBytes) {
         this.columnName = columnName;
         this.columnType = columnType;
+        this.numBytes = numBytes;
     }
 
     public String getColumnName() {
         return columnName;
     }
 
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
-    }
-
     public String getColumnType() {
         return columnType;
     }
 
-    public void setColumnType(String columnType) {
-        this.columnType = columnType;
+    public int getNumBytes() {
+        return numBytes;
     }
 
     @Override

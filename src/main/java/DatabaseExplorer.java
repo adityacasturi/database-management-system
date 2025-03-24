@@ -13,7 +13,7 @@ class DatabaseExplorer {
     // List all databases by listing directories inside the "dbs" folder.
     public static List<String> listDatabases() {
         List<String> databases = new ArrayList<>();
-        File dbsFolder = new File(StorageLocations.STORAGE_LOC);
+        File dbsFolder = new File(Constants.STORAGE_LOC);
         if (dbsFolder.exists() && dbsFolder.isDirectory()) {
             File[] files = dbsFolder.listFiles();
             if (files == null) {
@@ -30,7 +30,7 @@ class DatabaseExplorer {
 
     public static List<String> listTables(String dbName) {
         List<String> tables = new ArrayList<>();
-        File dbFolder = new File(StorageLocations.STORAGE_LOC + File.separator + dbName);
+        File dbFolder = new File(Constants.STORAGE_LOC + File.separator + dbName);
         if (dbFolder.exists() && dbFolder.isDirectory()) {
             File[] files = dbFolder.listFiles();
             if (files == null) {
@@ -48,7 +48,7 @@ class DatabaseExplorer {
 
     // Read and return the schema for a given table.
     public static TableSchema getTableSchema(String dbName, String tableName) throws Exception {
-        String schemaFilePath = StorageLocations.STORAGE_LOC + File.separator + dbName + File.separator + tableName + ".schema";
+        String schemaFilePath = Constants.STORAGE_LOC + File.separator + dbName + File.separator + tableName + ".schema";
         File schemaFile = new File(schemaFilePath);
 
         if (!schemaFile.exists()) {
@@ -60,7 +60,7 @@ class DatabaseExplorer {
             String[] row;
             while ((row = csvReader.readNext()) != null) {
                 if (row.length >= 2) {
-                    schemaEntries.add(new String[]{row[0].trim(), row[1].trim()});
+                    schemaEntries.add(new String[]{row[0].trim(), row[1].trim(), row[2].trim()});
                 }
             }
         } catch (IOException | CsvValidationException e) {
@@ -73,14 +73,14 @@ class DatabaseExplorer {
 
         List<ColumnSchema> columns = new ArrayList<>();
         for (String[] row : schemaEntries) {
-            columns.add(new ColumnSchema(row[0], row[1]));
+            columns.add(new ColumnSchema(row[0], row[1], Integer.parseInt(row[2])));
         }
         return new TableSchema(columns, tableName);
     }
 
     // Read and return the data for a given table.
     public static List<String[]> getTableData(String dbName, String tableName) throws Exception {
-        String dataFilePath = StorageLocations.STORAGE_LOC + File.separator + dbName + File.separator + tableName + ".csv";
+        String dataFilePath = Constants.STORAGE_LOC + File.separator + dbName + File.separator + tableName + ".csv";
         File dataFile = new File(dataFilePath);
         if (!dataFile.exists()) {
             throw new Exception("Data file does not exist");

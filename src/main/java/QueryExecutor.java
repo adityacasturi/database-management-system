@@ -4,62 +4,49 @@ import model.ColumnSchema;
 import model.SimpleQuery;
 import model.TableSchema;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class QueryExecutor {
-    public static int execute(SimpleQuery query) throws Exception {
+    public static List<String[]> execute(SimpleQuery query) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(4);
-        List<Future<Integer>> futures = new ArrayList<>();
-
-        String dataFilesPath = StorageLocations.STORAGE_LOC + File.separator + query.getDatabaseName();
+        List<Future<List<String[]>>> futures = new ArrayList<>();
 
         TableSchema tableSchema;
         try {
             tableSchema = DatabaseExplorer.getTableSchema(query.getDatabaseName(), query.getTableName());
         } catch (Exception e) {
-            throw new Exception("Specified table " + query.getTableName() + "does not exist in " +
+            throw new Exception("Specified table " + query.getTableName() + " does not exist in " +
                     "database " + query.getDatabaseName());
         }
 
-        final int colIndex = getColIndex(tableSchema, query.getColumnName());
-        int shardIdx = 0;
-        while (true) {
-            File dataFile = new File(dataFilesPath + File.separator + query.getTableName() + "_" + shardIdx + ".csv");
-            if (!dataFile.exists()) {
-                break;
-            }
+        int byteCount = 0;
+        for (ColumnSchema colSchema : tableSchema.getColumns()) {
+            byteCount += colSchema.getNumBytes();
+        }
+        final int bytesPerRow = byteCount;
 
+        Map<Integer, List<Long>> pools = getIndexPools(query);
+        for (int dataFileSuffix : pools.keySet()) {
             futures.add(executor.submit(() -> {
-                int rowsFound = 0;
+                File dataFile = new File(Constants.STORAGE_LOC + File.separator +
+                        query.getDatabaseName() + File.separator + query.getTableName() + "_" +
+                        dataFileSuffix + ".csv");
 
-                try (CSVReader csvReader = new CSVReader(new FileReader(dataFile))) {
-                    String[] row;
-                    while ((row = csvReader.readNext()) != null) {
-                        if (row[colIndex].equals(query.getValue())) {
-                            rowsFound++;
-                        }
-                    }
-                } catch (IOException | CsvValidationException e) {
-                    throw new Exception("Error parsing data file.", e);
-                }
-
-                return rowsFound;
+                List<Long> indexes = pools.get(dataFileSuffix);
+                return getRowsFromIndexes(indexes, dataFile, bytesPerRow,
+                        dataFileSuffix * Constants.LINES_PER_FILE, tableSchema);
             }));
-
-            shardIdx++;
         }
 
-        int totalRowsFound = 0;
-        for (Future<Integer> future : futures) {
+        List<String[]> rows = new ArrayList<>();
+        for (Future<List<String[]>> future : futures) {
             try {
-                totalRowsFound += future.get();
+                rows.addAll(future.get());
             } catch (Exception e) {
                 throw new Error("Error while executing query", e);
             }
@@ -67,19 +54,69 @@ public class QueryExecutor {
 
         executor.shutdown();
 
-        return totalRowsFound;
+        return rows;
     }
 
-    private static int getColIndex(TableSchema tableSchema, String columnName) throws Exception {
-        int colIndex = 0;
-        for (ColumnSchema columnSchema : tableSchema.getColumns()) {
-            if (columnSchema.getColumnName().equals(columnName)) {
-                return colIndex;
+    private static List<String[]> getRowsFromIndexes(List<Long> indexes, File dataFile, int bytesPerRow,
+                                                     int startingRowIndex, TableSchema schema) throws Exception {
+        try {
+            List<String[]> rows = new ArrayList<>();
+            FileInputStream fis = new FileInputStream(dataFile);
+
+            for (int i = 0; i < indexes.size(); i++) {
+                long rowIndex = indexes.get(i);
+                long amtToSkip = i == 0 ? (rowIndex - startingRowIndex) * bytesPerRow : (rowIndex - indexes.get(i - 1) - 1) * bytesPerRow;
+
+                fis.skipNBytes(amtToSkip);
+
+                String[] row = new String[schema.getColumns().size()];
+
+                for (int j = 0; j < schema.getColumns().size(); j++) {
+                    ColumnSchema colSchema = schema.getColumns().get(j);
+                    byte[] bytes = fis.readNBytes(colSchema.getNumBytes());
+                    row[j] = new String(bytes, StandardCharsets.US_ASCII);
+                }
+
+                rows.add(row);
             }
-            colIndex++;
+
+            fis.close();
+            return rows;
+        } catch (FileNotFoundException e) {
+            throw new Exception("Error while reading file: ", e);
+        }
+    }
+
+    private static Map<Integer, List<Long>> getIndexPools(SimpleQuery query) throws Exception {
+        File colIndexFile = new File(Constants.STORAGE_LOC + File.separator +
+                query.getDatabaseName() + File.separator + query.getTableName() + "_" + query.getColumnName() + ".index");
+
+        if (!colIndexFile.exists()) {
+            throw new Exception("Column " + query.getColumnName() + " does not exist.");
         }
 
-        throw new Exception("Specified column " + columnName + " does not exist in" +
-                " table " + tableSchema.getTableName());
+        try (CSVReader csvReader = new CSVReader(new FileReader(colIndexFile))) {
+            String[] row;
+            while ((row = csvReader.readNext()) != null) {
+                if (row[0].equals(query.getValue())) {
+                    break;
+                }
+            }
+
+            Map<Integer, List<Long>> indexPools = new HashMap<>();
+            if (row == null) {
+                return indexPools;
+            }
+
+            for (int i = 1; i < row.length; i++) {
+                int tableNum = Integer.parseInt(row[i]) / Constants.LINES_PER_FILE;
+
+                indexPools.computeIfAbsent(tableNum, _ -> new ArrayList<>()).add(Long.parseLong(row[i]));
+            }
+
+            return indexPools;
+        } catch (IOException | CsvValidationException e) {
+            throw new Exception("Error parsing data file.", e);
+        }
     }
 }

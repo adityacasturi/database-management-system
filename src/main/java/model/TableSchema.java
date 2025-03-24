@@ -3,8 +3,8 @@ package model;
 import java.util.List;
 
 public class TableSchema {
-    private String tableName;
-    private List<ColumnSchema> columns;
+    private final String tableName;
+    private final List<ColumnSchema> columns;
 
     public TableSchema(List<ColumnSchema> columns, String tableName) {
         this.columns = columns;

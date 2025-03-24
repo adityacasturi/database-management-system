@@ -1,14 +1,16 @@
 package model;
 
+import java.util.List;
+
 public class QueryResult {
     private final String databaseName;
     private final String tableName;
-    private final int rowsFound;
+    private final List<String[]> rows;
 
-    public QueryResult(String databaseName, String tableName, int rowsFound) {
+    public QueryResult(String databaseName, String tableName, List<String[]> rows) {
         this.databaseName = databaseName;
         this.tableName = tableName;
-        this.rowsFound = rowsFound;
+        this.rows = rows;
     }
 
     public String getDatabaseName() {
@@ -19,7 +21,7 @@ public class QueryResult {
         return tableName;
     }
 
-    public int getRowsFound() {
-        return rowsFound;
+    public List<String[]> getRows() {
+        return rows;
     }
 }
