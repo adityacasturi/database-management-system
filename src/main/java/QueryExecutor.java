@@ -29,7 +29,6 @@ public class QueryExecutor {
         }
 
         final int colIndex = getColIndex(tableSchema, query.getColumnName());
-
         int shardIdx = 0;
         while (true) {
             File dataFile = new File(dataFilesPath + File.separator + query.getTableName() + "_" + shardIdx + ".csv");
