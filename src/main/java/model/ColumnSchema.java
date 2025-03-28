@@ -1,33 +1,39 @@
 package model;
 
-public class ColumnSchema {
-    private final String columnName;
-    private final String columnType;
-    private final int numBytes;
+import java.util.Objects;
 
-    public ColumnSchema(String columnName, String columnType, int numBytes) {
+public abstract class ColumnSchema {
+    private final String columnName;
+    protected String columnType;
+    private final boolean indexed;
+
+    ColumnSchema(String columnName, boolean indexed) {
         this.columnName = columnName;
-        this.columnType = columnType;
-        this.numBytes = numBytes;
+        this.indexed = indexed;
+        this.columnType = getColumnType();
     }
+
+    public abstract int getNumBytes();
+
+    public abstract String getColumnType();
 
     public String getColumnName() {
         return columnName;
     }
 
-    public String getColumnType() {
-        return columnType;
-    }
-
-    public int getNumBytes() {
-        return numBytes;
+    public boolean isIndexed() {
+        return indexed;
     }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof ColumnSchema)) {
-            return false;
-        }
-        return this.columnName.equals(((ColumnSchema) o).columnName);
+        if (o == null || getClass() != o.getClass()) return false;
+        ColumnSchema that = (ColumnSchema) o;
+        return Objects.equals(columnName, that.columnName);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(columnName);
     }
 }

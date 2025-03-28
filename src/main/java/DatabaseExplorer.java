@@ -1,11 +1,13 @@
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import model.ColumnSchema;
+import model.ColumnSchemaTypeAdapter;
 import model.TableSchema;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,7 +40,7 @@ class DatabaseExplorer {
             }
             for (File file : files) {
                 String fileName = file.getName();
-                if (fileName.endsWith("_0.csv")) {
+                if (fileName.endsWith("_0.data")) {
                     tables.add(fileName.split("_")[0]);
                 }
             }
@@ -48,39 +50,24 @@ class DatabaseExplorer {
 
     // Read and return the schema for a given table.
     public static TableSchema getTableSchema(String dbName, String tableName) throws Exception {
-        String schemaFilePath = Constants.STORAGE_LOC + File.separator + dbName + File.separator + tableName + ".schema";
+        String schemaFilePath = String.format(Constants.SCHEMA_FILE_LOC, dbName, tableName);
         File schemaFile = new File(schemaFilePath);
 
         if (!schemaFile.exists()) {
             throw new Exception("Schema file does not exist");
         }
 
-        List<String[]> schemaEntries = new ArrayList<>();
-        try (CSVReader csvReader = new CSVReader(new FileReader(schemaFile))) {
-            String[] row;
-            while ((row = csvReader.readNext()) != null) {
-                if (row.length >= 2) {
-                    schemaEntries.add(new String[]{row[0].trim(), row[1].trim(), row[2].trim()});
-                }
-            }
-        } catch (IOException | CsvValidationException e) {
-            throw new Exception("Error parsing schema file.", e);
-        }
+        String schemaFileJson = new String(Files.readAllBytes(schemaFile.toPath()));
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(ColumnSchema.class, new ColumnSchemaTypeAdapter())
+                .create();
 
-        if (schemaEntries.isEmpty()) {
-            throw new Exception("No schema information found in file.");
-        }
-
-        List<ColumnSchema> columns = new ArrayList<>();
-        for (String[] row : schemaEntries) {
-            columns.add(new ColumnSchema(row[0], row[1], Integer.parseInt(row[2])));
-        }
-        return new TableSchema(columns, tableName);
+        return gson.fromJson(schemaFileJson, TableSchema.class);
     }
 
     // Read and return the data for a given table.
     public static List<String[]> getTableData(String dbName, String tableName) throws Exception {
-        String dataFilePath = Constants.STORAGE_LOC + File.separator + dbName + File.separator + tableName + ".csv";
+        String dataFilePath = Constants.STORAGE_LOC + File.separator + dbName + File.separator + tableName + ".data";
         File dataFile = new File(dataFilePath);
         if (!dataFile.exists()) {
             throw new Exception("Data file does not exist");

@@ -85,30 +85,26 @@ public class Client {
                     long durationInMillis = (endTime - startTime) / 1_000_000;
 
                     System.out.println("Query execution time: " + durationInMillis + " ms");
-                    System.out.println(res.getRows().size() + " rows returned by query.");
+                    System.out.println(res.getNumRows() + " rows returned by query.");
 
-                    if (res.getRows().isEmpty()) {
-                        return;
-                    }
-
-                    TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, res.getTableName());
-                    AsciiTable at = new AsciiTable();
-
-                    String[] header = new String[tableSchema.getColumns().size()];
-                    for (int i = 0; i < tableSchema.getColumns().size(); i++) {
-                        header[i] = tableSchema.getColumns().get(i).getColumnName();
-                    }
-                    at.addRule();
-                    at.addRow((Object[]) header);
-                    at.addRule();
-
-                    for (int i = 0; i < res.getRows().size(); i++) {
-                        String[] row = res.getRows().get(i);
-                        at.addRow((Object[]) row);
-                        at.addRule();
-                    }
-
-                    System.out.println(at.render());
+//                    TableSchema tableSchema = DatabaseExplorer.getTableSchema(dbName, res.getTableName());
+//                    AsciiTable at = new AsciiTable();
+//
+//                    String[] header = new String[tableSchema.getColumns().size()];
+//                    for (int i = 0; i < tableSchema.getColumns().size(); i++) {
+//                        header[i] = tableSchema.getColumns().get(i).getColumnName();
+//                    }
+//                    at.addRule();
+//                    at.addRow((Object[]) header);
+//                    at.addRule();
+//
+//                    for (int i = 0; i < res.getNumRows().size(); i++) {
+//                        Object[] row = res.getNumRows().get(i);
+//                        at.addRow(row);
+//                        at.addRule();
+//                    }
+//
+//                    System.out.println(at.render());
 
                     return;
                 } catch (Exception e) {
