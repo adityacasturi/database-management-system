@@ -14,7 +14,7 @@ public class StringColumnSchema extends ColumnSchema {
     }
 
     @Override
-    public String getColumnType() {
-        return "String";
+    public COLUMN_TYPES getColumnType() {
+        return COLUMN_TYPES.STRING_TYPE;
     }
 }

@@ -11,7 +11,7 @@ public class IntColumnSchema extends ColumnSchema {
     }
 
     @Override
-    public String getColumnType() {
-        return "int";
+    public COLUMN_TYPES getColumnType() {
+        return COLUMN_TYPES.INT_TYPE;
     }
 }

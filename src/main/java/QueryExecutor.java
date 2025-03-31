@@ -1,70 +1,57 @@
 import model.ColumnSchema;
+import model.ColumnSchema.COLUMN_TYPES;
 import model.SimpleQuery;
 import model.TableSchema;
 
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class QueryExecutor {
-    public static int execute(SimpleQuery query) throws Exception {
-        ExecutorService executor = Executors.newFixedThreadPool(4);
-        List<Future<Integer>> futures = new ArrayList<>();
+    public static int execute(SimpleQuery query) throws ExecutionException, InterruptedException {
+        int numRows;
 
-        TableSchema tableSchema;
-        try {
-            tableSchema = DatabaseExplorer.getTableSchema(query.getDatabaseName(), query.getTableName());
-        } catch (Exception e) {
-            throw new Exception("Specified table " + query.getTableName() + " does not exist in " +
-                    "database " + query.getDatabaseName());
-        }
+        try (ExecutorService executor = Executors.newCachedThreadPool()) {
+            List<Future<Integer>> futures = new ArrayList<>();
+            TableSchema tableSchema = query.getTableSchema();
 
-        boolean colExists = false;
-        int maxColValueSize = 0;
-        int byteCount = 0;
-        boolean indexed = false;
-        String colType = "";
-        for (ColumnSchema colSchema : tableSchema.getColumns()) {
-            if (colSchema.getColumnName().equals(query.getColumnName())) {
-                colExists = true;
-                colType = colSchema.getColumnType();
-                maxColValueSize = colSchema.getNumBytes();
-                indexed = colSchema.isIndexed();
+            int maxColValueSize = 0;
+            int bytesPerRow = 0;
+            COLUMN_TYPES colType = null;
+            for (ColumnSchema colSchema : tableSchema.getColumns()) {
+                if (colSchema.getColumnName().equals(query.getColumnName())) {
+                    colType = colSchema.getColumnType();
+                    maxColValueSize = colSchema.getNumBytes();
+                }
+
+                bytesPerRow += colSchema.getNumBytes();
             }
-            byteCount += colSchema.getNumBytes();
-        }
-        final int bytesPerRow = byteCount;
 
-        if (!colExists) {
-            throw new Exception("Specified column does not exist.");
-        }
+            int shardSuffix = 0;
 
-        if (!indexed) {
-            throw new Exception("Specified column not indexed.");
-        }
+            while (true) {
+                File dataShardFile = new File(String.format(Constants.SHARD_LOC, query.getDatabaseName(), tableSchema.getTableName(), shardSuffix));
+                if (!dataShardFile.exists()) {
+                    break;
+                }
 
-        int shardSuffix = 0;
-        File shard = new File(String.format(Constants.SHARD_LOC, query.getDatabaseName(), query.getTableName(), shardSuffix));
+                String colIndexShardFilePath = String.format(Constants.INDEX_FILE_LOC, query.getDatabaseName(),
+                        query.getTableSchema().getTableName(), shardSuffix, query.getColumnName());
 
-        while (shard.exists()) {
-            futures.add(executor.submit(new Task(shardSuffix, maxColValueSize, bytesPerRow, colType, query, shard, tableSchema)));
+                futures.add(executor.submit(new Task(colType, query, new File(colIndexShardFilePath), dataShardFile, maxColValueSize, bytesPerRow)));
+                shardSuffix++;
+            }
 
-            shardSuffix++;
-            shard = new File(String.format(Constants.SHARD_LOC, query.getDatabaseName(), query.getTableName(), shardSuffix));
-        }
-
-        int numRows = 0;
-        for (Future<Integer> future : futures) {
-            try {
+            numRows = 0;
+            for (Future<Integer> future : futures) {
                 numRows += future.get();
-            } catch (Exception e) {
-                throw new Error("Error while executing query", e);
             }
-        }
 
-        executor.shutdown();
+            executor.shutdown();
+        }
 
         return numRows;
     }

@@ -3,8 +3,12 @@ package model;
 import java.util.Objects;
 
 public abstract class ColumnSchema {
+    public enum COLUMN_TYPES {
+        STRING_TYPE, INT_TYPE
+    }
+
     private final String columnName;
-    protected String columnType;
+    protected COLUMN_TYPES columnType;
     private final boolean indexed;
 
     ColumnSchema(String columnName, boolean indexed) {
@@ -15,7 +19,7 @@ public abstract class ColumnSchema {
 
     public abstract int getNumBytes();
 
-    public abstract String getColumnType();
+    public abstract COLUMN_TYPES getColumnType();
 
     public String getColumnName() {
         return columnName;

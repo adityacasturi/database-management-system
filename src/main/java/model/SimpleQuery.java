@@ -1,14 +1,14 @@
 package model;
 
 public class SimpleQuery {
-    private String databaseName;
-    private String tableName;
-    private String columnName;
-    private String value;
+    private final String databaseName;
+    private final TableSchema tableSchema;
+    private final String columnName;
+    private final String value;
 
-    public SimpleQuery(String dbName, String tableName, String columnName, String value) {
+    public SimpleQuery(String dbName, TableSchema tableSchema, String columnName, String value) {
         this.databaseName = dbName;
-        this.tableName = tableName;
+        this.tableSchema = tableSchema;
         this.columnName = columnName;
         this.value = value;
     }
@@ -17,8 +17,8 @@ public class SimpleQuery {
         return databaseName;
     }
 
-    public String getTableName() {
-        return tableName;
+    public TableSchema getTableSchema() {
+        return tableSchema;
     }
 
     public String getColumnName() {
@@ -27,14 +27,5 @@ public class SimpleQuery {
 
     public String getValue() {
         return value;
-    }
-
-    @Override
-    public String toString() {
-        return "SimpleQuery{" +
-                "tableName='" + tableName + '\'' +
-                ", columnName='" + columnName + '\'' +
-                ", value='" + value + '\'' +
-                '}';
     }
 }

@@ -13,7 +13,7 @@ import java.util.List;
 
 class DatabaseExplorer {
     // List all databases by listing directories inside the "dbs" folder.
-    public static List<String> listDatabases() {
+    public static List<String> getDatabases() {
         List<String> databases = new ArrayList<>();
         File dbsFolder = new File(Constants.STORAGE_LOC);
         if (dbsFolder.exists() && dbsFolder.isDirectory()) {
@@ -30,7 +30,7 @@ class DatabaseExplorer {
         return databases;
     }
 
-    public static List<String> listTables(String dbName) {
+    public static List<String> getTables(String dbName) {
         List<String> tables = new ArrayList<>();
         File dbFolder = new File(Constants.STORAGE_LOC + File.separator + dbName);
         if (dbFolder.exists() && dbFolder.isDirectory()) {
