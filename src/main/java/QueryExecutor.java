@@ -41,7 +41,7 @@ public class QueryExecutor {
                 String colIndexShardFilePath = String.format(Constants.INDEX_FILE_LOC, query.getDatabaseName(),
                         query.getTableSchema().getTableName(), shardSuffix, query.getColumnName());
 
-                futures.add(executor.submit(new Task(colType, query, new File(colIndexShardFilePath), dataShardFile, maxColValueSize, bytesPerRow)));
+                futures.add(executor.submit(new CountTask(colType, query, new File(colIndexShardFilePath), dataShardFile, maxColValueSize, bytesPerRow)));
                 shardSuffix++;
             }
 

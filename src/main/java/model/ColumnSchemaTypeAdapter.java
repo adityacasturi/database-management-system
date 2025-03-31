@@ -10,9 +10,9 @@ public class ColumnSchemaTypeAdapter implements JsonDeserializer<ColumnSchema>, 
         JsonObject jsonObject = json.getAsJsonObject();
         String type = jsonObject.get("columnType").getAsString();
 
-        if ("int".equals(type)) {
+        if ("INT_TYPE".equals(type)) {
             return context.deserialize(json, IntColumnSchema.class);
-        } else if ("String".equals(type)) {
+        } else if ("STRING_TYPE".equals(type)) {
             return context.deserialize(json, StringColumnSchema.class);
         } else {
             throw new JsonParseException("Unknown column type: " + type);

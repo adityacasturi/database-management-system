@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.Callable;
 
-public class Task implements Callable<Integer> {
+public class CountTask implements Callable<Integer> {
     private final ColumnSchema.COLUMN_TYPES colType;
     private final SimpleQuery query;
     private final File colIndexShardFile;
@@ -21,8 +21,8 @@ public class Task implements Callable<Integer> {
 
     private final byte[] stringBytes;
 
-    public Task(COLUMN_TYPES colType, SimpleQuery query, File colIndexShardFile,
-                File dataShardFile, int maxColValueSize, int bytesPerRow) {
+    public CountTask(COLUMN_TYPES colType, SimpleQuery query, File colIndexShardFile,
+                     File dataShardFile, int maxColValueSize, int bytesPerRow) {
         this.colType = colType;
         this.query = query;
         this.colIndexShardFile = colIndexShardFile;

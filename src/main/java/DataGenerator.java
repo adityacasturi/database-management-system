@@ -56,10 +56,10 @@ public class DataGenerator {
 
         TableSchema tableSchema = new TableSchema(columns, "cities");
         try {
-            generateSchemaFile(tableSchema, "city_locations1");
-            generateShardAndIndexFiles(tableSchema, "city_locations1", 1, 10);
+            generateSchemaFile(tableSchema, "city_data");
+            generateShardAndIndexFiles(tableSchema, "city_data", 10, 1000);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println(e.getMessage());
         }
     }
 
@@ -79,10 +79,10 @@ public class DataGenerator {
                 for (int colIndex = 0; colIndex < tableSchema.getColumns().size(); colIndex++) {
                     ColumnSchema colSchema = tableSchema.getColumns().get(colIndex);
                     Object val;
-                    if (colSchema.getColumnType().equals("String")) {
+                    if (colSchema.getColumnType() == ColumnSchema.COLUMN_TYPES.STRING_TYPE) {
                         val = String.valueOf(randomCity[colIndex]);
                         shardStream.write(ByteBuffer.allocate(colSchema.getNumBytes()).put(((String) val).getBytes()).array());
-                    } else if (colSchema.getColumnType().equals("int")) {
+                    } else if (colSchema.getColumnType() == ColumnSchema.COLUMN_TYPES.INT_TYPE) {
                         val = randomCity[colIndex];
                         shardStream.write(ByteBuffer.allocate(colSchema.getNumBytes()).putInt((Integer) val).array());
                     } else {
@@ -105,9 +105,9 @@ public class DataGenerator {
                 FileOutputStream shardColIndexStream = new FileOutputStream(shardColIndex);
 
                 for (Object val : columnIndexMap.get(colSchema).keySet()) {
-                    if (colSchema.getColumnType().equals("String")) {
+                    if (colSchema.getColumnType() == ColumnSchema.COLUMN_TYPES.STRING_TYPE) {
                         shardColIndexStream.write(ByteBuffer.allocate(colSchema.getNumBytes()).put(((String) val).getBytes()).array());
-                    } else if (colSchema.getColumnType().equals("int")) {
+                    } else if (colSchema.getColumnType() == ColumnSchema.COLUMN_TYPES.INT_TYPE) {
                         shardColIndexStream.write(ByteBuffer.allocate(colSchema.getNumBytes()).putInt((Integer) val).array());
                     } else {
                         throw new Exception("Unknown column type");
